@@ -97,10 +97,8 @@ async def check_calendar():
                     msg = d['msg'].replace('%time%', time_text)
                     log.debug(f'send {d_time} {msg}')
                     channel = bot.get_channel(channel_id)
-                    if channel:
-                        print(msg)
-                        # TODO: Descomentar
-                        # await channel.send(msg)
+                    if channel
+                        await channel.send(msg)
                     else:
                         log.error(f'channel {channel_id} not found')
     except Exception as e:
@@ -172,9 +170,7 @@ async def send_registre():
                 data = f"Ayer día {yesterday} se obtuvo el siguiente registro de horas en Discord:\n" + data
                 messages = split_message(data)
                 for message in messages:
-                    print(message)
-                    # TODO: descomentar
-                    # await channel.send(message)
+                    await channel.send(message)
             else:
                 raise Exception(f'channel CONTROL not found')
     except Exception as e:
