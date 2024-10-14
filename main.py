@@ -119,7 +119,7 @@ def get_calendar():
         service = build('calendar', 'v3', credentials=credentials)
 
         tz = pytz.timezone("Europe/Madrid")
-        now = datetime.now(tz).replace(microsecond=0)
+        now = datetime.now(tz).replace(tzinfo=None)
         time_min = now.isoformat() + 'Z'
         time_max = (now + timedelta(hours=24)).isoformat() + 'Z'
 
