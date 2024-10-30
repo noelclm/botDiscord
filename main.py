@@ -37,6 +37,16 @@ async def on_ready():
 
 
 @bot.event
+async def on_member_join(member):
+    message = f"Hola {member.mention}!! Bienvenid@ a {member.guild.name}!! ya somos {member.guild.member_count}!!"
+    channel = bot.get_channel(DISCORD_CHANNEL['GENERAL'])
+    if channel:
+        await channel.send(message)
+    else:
+        log.error(f'channel general not found')
+
+
+@bot.event
 async def on_presence_update(before, after):
     try:
         madrid_tz = pytz.timezone('Europe/Madrid')
