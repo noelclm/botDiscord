@@ -1,0 +1,19 @@
+services:
+  discord-bot:
+    container_name: discord-bot
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./src:/app/src
+    env_file:
+      - src/.env
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: non-blocking
+    environment:
+      - PYTHONUNBUFFERED=1

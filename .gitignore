@@ -1,9 +1,10 @@
 # Environments
-.env
+src/.env
 venv/
 
 # PyCharm
 .idea/
+__pycache__
 
 # Bot
 bot.sqlite

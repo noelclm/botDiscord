@@ -13,13 +13,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from db_connections import SQLiteDB
-from functions import Log, split_message
+from functions import Log, split_message, text_state
 
 TOKEN_BOT_DISCORD = os.getenv('TOKEN_BOT_DISCORD')
 DISCORD_CHANNEL = json.loads(os.getenv('DISCORD_CHANNEL'))
 CALENDAR_SCOPES = os.getenv('CALENDAR_SCOPES').split(',')
 CALENDAR_CREDENTIALS = json.loads(os.getenv('CALENDAR_CREDENTIALS'))
 CALENDAR_ID = os.getenv('CALENDAR_ID')
+TIMEZONE = os.getenv('TIMEZONE')
 
 log = Log('./', 'discord_logs')
 db = SQLiteDB('bot.sqlite')
@@ -32,8 +33,10 @@ calendar = {}
 
 @bot.event
 async def on_ready():
-    log.info(f'Iniciando bot: {bot.user.name}')
+    log.info('on_ready', f'Iniciando bot {bot.user.name}')
     scheduler.start()
+    channel = bot.get_channel(1379121716336529461)
+    await channel.send(f"Hola!!")
 
 
 @bot.event
@@ -43,15 +46,15 @@ async def on_member_join(member):
     if channel:
         await channel.send(message)
     else:
-        log.error(f'channel general not found')
+        log.error('on_member_join', f'channel general not found')
 
 
 @bot.event
 async def on_presence_update(before, after):
     try:
-        madrid_tz = pytz.timezone('Europe/Madrid')
-        now_madrid = datetime.now(madrid_tz)
-        formatted_now_madrid = now_madrid.strftime("%d-%m-%Y %H:%M:%S")
+        tz = pytz.timezone(TIMEZONE)
+        now = datetime.now(tz)
+        formatted_now = now.strftime("%d-%m-%Y %H:%M:%S")
 
         member_id = before.id
         member_name = before.name
@@ -64,8 +67,8 @@ async def on_presence_update(before, after):
         if old_status != new_status and old_mobile_status == new_mobile_status:
             old_status_name = text_state(old_status)
             new_status_name = text_state(new_status)
-            log.data(f'PC | {member_display_name} ({member_name}) ha cambiado de {old_status_name} '
-                     f'a {new_status_name} a las {formatted_now_madrid}')
+            log.data('on_presence_update', f'PC | {member_display_name} ({member_name}) ha cambiado de {old_status_name} '
+                     f'a {new_status_name} a las {formatted_now}')
             sql = (f"INSERT INTO discord_log (user_id, member_name, member_display_name, old_status, new_status) "
                    f"VALUES ({member_id}, '{member_name}', '{member_display_name}', '{old_status}', '{new_status}');")
             db.insert(sql)
@@ -73,8 +76,8 @@ async def on_presence_update(before, after):
         if old_mobile_status != new_mobile_status:
             old_status_name = text_state(old_mobile_status)
             new_status_name = text_state(new_mobile_status)
-            log.data(f'Móvil | {member_display_name} ({member_name}) ha cambiado de {old_status_name} '
-                     f'a {new_status_name} a las {formatted_now_madrid}')
+            log.data('on_presence_update', f'Móvil | {member_display_name} ({member_name}) ha cambiado de {old_status_name} '
+                     f'a {new_status_name} a las {formatted_now}')
             sql = (f"INSERT INTO discord_log "
                    f"(user_id, member_name, member_display_name, old_status, new_status, mobile) "
                    f"VALUES ({member_id}, '{member_name}', '{member_display_name}', '{old_mobile_status}', "
@@ -82,20 +85,20 @@ async def on_presence_update(before, after):
             db.insert(sql)
 
     except Exception as e:
-        log.error(f'Error in on_presence_update: {e}')
+        log.error('on_presence_update', f'{e}')
 
 
 async def check_calendar():
     try:
-        tz = pytz.timezone("Europe/Madrid")
+        tz = pytz.timezone(TIMEZONE)
         now = datetime.now(tz).replace(microsecond=0)
         time_max = now + timedelta(minutes=15)
-        log.debug(f'check_calendar {now}')
+        log.debug('check_calendar', f'Search events')
         for event_time, data in calendar.items():
             event_time_dt = datetime.fromisoformat(event_time).astimezone(tz).replace(microsecond=0)
-            log.debug(f'event_time_dt {event_time_dt}')
+            log.debug('check_calendar', f'event_time_dt {event_time_dt}')
             if now <= event_time_dt <= time_max:
-                log.debug(f'time_max {time_max}')
+                log.debug('check_calendar', f'time_max {time_max}')
                 for d in data:
                     d_time = d['time']
                     channel_id = d['chanel']
@@ -105,14 +108,14 @@ async def check_calendar():
                     else:
                         time_text = f'a las **{d_time}**'
                     msg = d['msg'].replace('%time%', time_text)
-                    log.debug(f'send {d_time} {msg}')
+                    log.debug('check_calendar', f'send {d_time} {msg}')
                     channel = bot.get_channel(channel_id)
-                    if channel
+                    if channel:
                         await channel.send(msg)
                     else:
-                        log.error(f'channel {channel_id} not found')
+                        log.error('check_calendar', f'channel {channel_id} not found')
     except Exception as e:
-        log.error(f'Error in check_calendar: {e}')
+        log.error('check_calendar', f'{e}')
 
 
 async def cron_calendar():
@@ -126,7 +129,7 @@ def get_calendar():
         credentials = service_account.Credentials.from_service_account_info(CALENDAR_CREDENTIALS, scopes=CALENDAR_SCOPES)
         service = build('calendar', 'v3', credentials=credentials)
 
-        tz = pytz.timezone("Europe/Madrid")
+        tz = pytz.timezone(TIMEZONE)
         now = datetime.now(tz).replace(tzinfo=None)
         time_min = now.isoformat() + 'Z'
         time_max = (now + timedelta(hours=24)).isoformat() + 'Z'
@@ -165,7 +168,7 @@ def get_calendar():
                     else:
                         raise Exception(f'channel id {channel_id} not found')
     except Exception as e:
-        log.error(f'Error in get_calendar: {e}')
+        log.error('get_calendar', f'{e}')
 
 
 async def send_registre():
@@ -184,23 +187,7 @@ async def send_registre():
             else:
                 raise Exception(f'channel CONTROL not found')
     except Exception as e:
-        log.error(f'Error in send_registre: {e}')
-
-
-def text_state(state):
-    if state == discord.Status.online or state == 'online':
-        status_name = 'conectado'
-    elif state == discord.Status.offline or state == 'offline':
-        status_name = 'desconectado'
-    elif state == discord.Status.idle or state == 'idle':
-        status_name = 'ausente'
-    elif state == discord.Status.dnd or state == 'dnd':
-        status_name = 'no molestar'
-    elif state == discord.Status.invisible or state == 'invisible':
-        status_name = 'invisible'
-    else:
-        status_name = 'estado no registrado'
-    return status_name
+        log.error('send_registre', f'{e}')
 
 
 def get_time_db(mobile=0):
@@ -287,7 +274,7 @@ def get_times():
 
 
 def signal_handler(sig, frame):
-    log.info("Exiting...")
+    log.info('signal_handler','Exiting...')
     db.close()
 
 

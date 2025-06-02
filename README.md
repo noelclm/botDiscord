@@ -14,9 +14,10 @@ puede configurar metiendo más canales y reconocimiento de eventos.
 2. Haz clic en “New Application”, ponle un nombre a tu bot y crea la aplicación. 
 3. En el menú de la izquierda, selecciona “Bot” y haz clic en “Add Bot”. 
 4. Copia el token de tu bot, lo necesitarás para ponerlo en .env. 
-5. Ve a la sección “OAuth2”, luego a “URL Generator”. 
-6. En “SCOPES”, selecciona bot y en “BOT PERMISSIONS”, selecciona los permisos que desees (por ejemplo, Send Messages). 
-7. Copia la URL generada, ábrela en el navegador y selecciona el servidor al que deseas invitar el bot.
+5. Baja hasta la sección Privileged Gateway Intents y activa estas dos opciones SERVER MEMBERS INTENT y PRESENCE INTENT
+6. Ve a la sección “OAuth2”, luego a “URL Generator”. 
+7. En “SCOPES”, selecciona bot y en “BOT PERMISSIONS”, selecciona los permisos que desees (por ejemplo, Send Messages). 
+8. Copia la URL generada, ábrela en el navegador y selecciona el servidor al que deseas invitar el bot.
 
 En .env tienes que meter el token de Discord los canales de Discord de esta forma.
 TOKEN_BOT_DISCORD=<token>
