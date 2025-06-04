@@ -7,7 +7,7 @@ services:
     volumes:
       - ./src:/app/src
     env_file:
-      - src/.env
+      - .env
     restart: unless-stopped
     logging:
       driver: "json-file"

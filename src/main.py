@@ -25,10 +25,9 @@ TIMEZONE = os.getenv('TIMEZONE')
 log = Log('./', 'discord_logs')
 db = SQLiteDB('bot.sqlite')
 
-intents = discord.Intents(guilds=True, members=True, presences=True)
-bot = commands.Bot(command_prefix='!', intents=intents)
+intents = discord.Intents(guilds=True, members=True, presences=True, message_content=True)
+bot = commands.Bot(command_prefix='!', intents=intents, case_insensitive=False)
 scheduler = AsyncIOScheduler()
-calendar = {}
 
 
 @bot.event
@@ -92,28 +91,28 @@ async def check_calendar():
     try:
         tz = pytz.timezone(TIMEZONE)
         now = datetime.now(tz).replace(microsecond=0)
-        time_max = now + timedelta(minutes=15)
+        time_str = now.strftime('%H:%M')
         log.debug('check_calendar', f'Search events')
-        for event_time, data in calendar.items():
-            event_time_dt = datetime.fromisoformat(event_time).astimezone(tz).replace(microsecond=0)
-            log.debug('check_calendar', f'event_time_dt {event_time_dt}')
-            if now <= event_time_dt <= time_max:
-                log.debug('check_calendar', f'time_max {time_max}')
-                for d in data:
-                    d_time = d['time']
-                    channel_id = d['chanel']
-                    time_str = now.strftime('%H:%M')
-                    if d_time == time_str:
-                        time_text = '***ahora***'
-                    else:
-                        time_text = f'a las **{d_time}**'
-                    msg = d['msg'].replace('%time%', time_text)
-                    log.debug('check_calendar', f'send {d_time} {msg}')
-                    channel = bot.get_channel(channel_id)
-                    if channel:
-                        await channel.send(msg)
-                    else:
-                        log.error('check_calendar', f'channel {channel_id} not found')
+
+        events = db.select("SELECT * FROM calendar_event;")
+
+        for event in events:
+            d_time = event['time']
+            channel_id = int(event['chanel'])  # Convert to int as channel IDs are integers
+
+            if d_time == time_str:
+                time_text = '***ahora***'
+            else:
+                time_text = f'a las **{d_time}**'
+
+            msg = event['msg'].replace('%time%', time_text)
+            log.debug('check_calendar', f'send {d_time} {msg}')
+
+            channel = bot.get_channel(channel_id)
+            if channel:
+                await channel.send(msg)
+            else:
+                log.error('check_calendar', f'channel {channel_id} not found')
     except Exception as e:
         log.error('check_calendar', f'{e}')
 
@@ -123,9 +122,9 @@ async def cron_calendar():
 
 
 def get_calendar():
-    global calendar
     try:
-        calendar = {}
+        db.delete("DELETE FROM calendar_event;")
+
         credentials = service_account.Credentials.from_service_account_info(CALENDAR_CREDENTIALS, scopes=CALENDAR_SCOPES)
         service = build('calendar', 'v3', credentials=credentials)
 
@@ -162,9 +161,9 @@ def get_calendar():
                     if name.startswith('Discord event -'):
                         channel_id = DISCORD_CHANNEL['GENERAL']
                     if channel_id:
-                        if start not in calendar:
-                            calendar[start] = []
-                        calendar[start].append({'chanel': channel_id, 'msg': msg, 'time': d_time})
+                        # Insert event into the calendar_event table
+                        sql = f"INSERT INTO calendar_event (chanel, msg, time) VALUES ('{channel_id}', '{msg}', '{d_time}')"
+                        db.insert(sql)
                     else:
                         raise Exception(f'channel id {channel_id} not found')
     except Exception as e:
@@ -279,12 +278,13 @@ def signal_handler(sig, frame):
 
 
 def main():
-    if len(calendar) == 0:
+    events = db.select("SELECT COUNT(*) as count FROM calendar_event;")
+    if events[0]['count'] == 0:
         get_calendar()
 
-    scheduler.add_job(cron_calendar, CronTrigger(minute=0, hour='00,12'))
-    scheduler.add_job(check_calendar, CronTrigger(minute='0,15,30,45'))
-    scheduler.add_job(send_registre, CronTrigger(minute=0, hour=6))
+    scheduler.add_job(cron_calendar, CronTrigger(minute=0, hour='00,12', timezone=pytz.timezone(TIMEZONE)))
+    scheduler.add_job(check_calendar, CronTrigger(minute='0,15,30,45', timezone=pytz.timezone(TIMEZONE)))
+    scheduler.add_job(send_registre, CronTrigger(minute=0, hour=6, timezone=pytz.timezone(TIMEZONE)))
 
     try:
         signal.signal(signal.SIGINT, signal_handler)

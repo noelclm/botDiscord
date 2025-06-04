@@ -8,3 +8,10 @@ CREATE TABLE IF NOT EXISTS discord_log (
     mobile BOOLEAN DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS calendar_event (
+    chanel TEXT NOT NULL,
+    msg TEXT NOT NULL,
+    time TIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

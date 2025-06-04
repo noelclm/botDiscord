@@ -25,7 +25,7 @@ DISCORD_CHANNEL={"GENERAL": <channel_id>, "CONTROL": <channel_id>}
 
 ##  Conectarse a Google calendar
 
-1. Ve a Google Cloud Console. (https://cloud.google.com/gcp/)
+1. Ve a Google Cloud Console. (https://console.cloud.google.com/)
 2. Crea un proyecto nuevo o selecciona uno existente.
 3. Habilita la Google Calendar API:
 •	En el menú de la izquierda, ve a “API & Services” > “Library”.
